@@ -2152,6 +2152,8 @@ Chat on WhatsApp|تواصل عبر واتساب`.split('\n').forEach(l => {
     { en: 'Our most concentrated extrait. Deep leather and violet over a base of rich patchouli and dark woods.', ar: 'أعلى تركيز في مجموعتنا. جلد عميق وبنفسج فوق قاعدة من الباتشولي الغني والأخشاب الداكنة.',
       n: [['Pink Pepper', 'Iris'], ['Leather', 'Violet'], ['Patchouli', 'Dark Woods']], na: [['فلفل وردي', 'سوسن'], ['جلد', 'بنفسج'], ['باتشولي', 'أخشاب داكنة']] }
   ];
+  let dzCategoryRows = [];
+  let dzRemoteDataReady = !(window.DEZEL && DEZEL.url);
   const dzArticles = [
     ['Behind the Scent', 'The Art of Perfumery', 'Every DÉZEL fragrance begins in Grasse, where our perfumers spend months balancing rare raw materials by hand. Each blend rests for weeks, then is refined until it feels inevitable.', 'تبدأ كل رائحة من DÉZEL في غراس، حيث يقضي صنّاع العطور شهورًا في موازنة خامات نادرة يدويًا. يُترك كل مزيج أسابيع ليهدأ، ثم يُصقل حتى يبلغ كماله.'],
     ['Ingredients', 'Rare Oud from Laos', 'Harvested from ancient agarwood trees and aged for years, this oud brings a smoky, resinous depth that no synthetic can imitate.', 'يُحصد من أشجار العود العتيقة ويُعتَّق لسنوات، ليمنح عمقًا دخانيًا راتنجيًا لا يُقلّده أي مركّب صناعي.'],
@@ -2186,31 +2188,68 @@ Chat on WhatsApp|تواصل عبر واتساب`.split('\n').forEach(l => {
     return box;
   }
   function dzRoute() {
-    const m = location.hash.match(/^#\/(product|journal)\/(\d+)$/);
-    if (!m) { if (dzPage.classList.contains('open')) { dzPage.classList.remove('open'); document.body.style.overflow = ''; } return; }
-    const i = +m[2], ar = dzLang === 'ar';
-    if (m[1] === 'product') {
-      const card = document.querySelectorAll('.product-card')[i], d = dzProducts[i];
-      if (!card || !d) return;
-      const q = c => card.querySelector(c).textContent;
-      const rows = (d.labels || ['Top notes', 'Heart notes', 'Base notes']).map((l, k) => '<div class="dp-note"><b>' + l + '</b><span>' + (ar ? d.na[k] : d.n[k]).join(' · ') + '</span></div>').join('');
-      dzBody.innerHTML = '<div class="dp-product"><div class="dp-bottle" id="dzArt"></div><div><h1 class="dp-name">' + q('.product-name') + '</h1><div class="dp-type">' + q('.product-type') + '</div><div class="dp-price">' + q('.product-price') + '</div><p class="dp-desc">' + (ar ? d.ar : d.en) + '</p><div class="dp-notes">' + rows + '</div><button class="add-btn" id="dzAdd">Add to Bag</button></div></div>';
-      document.getElementById('dzArt').appendChild(card.querySelector('svg, img').cloneNode(true));
-      const btn = document.getElementById('dzAdd');
-      if (card.querySelector('.add-btn').disabled) { btn.disabled = true; btn.textContent = 'Sold Out'; }
-      btn.addEventListener('click', () => {
-        card.querySelector('.add-btn').click();
-        btn.textContent = ar ? 'تمت الإضافة ✓' : 'Added ✓';
-        setTimeout(() => { btn.textContent = 'Add to Bag'; }, 1600);
-      });
-    } else {
-      const a = dzArticles[i], el = document.querySelectorAll('.blog-featured, .blog-item')[i];
-      if (!a) return;
-      dzBody.innerHTML = '<article class="dp-article"><div class="dp-art" id="dzArt"></div><div class="dp-tag">' + a[0] + '</div><h1 class="dp-title">' + a[1] + '</h1><p>' + (ar ? a[3] : a[2]) + '</p></article>';
-      const svg = el && el.querySelector('svg');
-      if (svg) document.getElementById('dzArt').appendChild(svg.cloneNode(true));
+    const ar = dzLang === 'ar';
+    const closePage = () => { dzPage.classList.remove('open'); document.body.style.overflow = ''; };
+    const openPage = () => { dzPage.classList.add('open'); dzPage.scrollTop = 0; document.body.style.overflow = 'hidden'; };
+    const safe = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const path = location.pathname.split('/').filter(Boolean).map(s => { try { return decodeURIComponent(s); } catch (_) { return s; } });
+    if (!path.length) {
+      const old = location.hash.match(/^#\/(product|journal)\/(\d+)$/);
+      if (!old) { closePage(); return; }
+      if (old[1] === 'product') { dzRenderProduct(document.querySelectorAll('.product-card')[+old[2]], +old[2]); return; }
+      const article = dzArticles[+old[2]], el = document.querySelectorAll('.blog-featured, .blog-item')[+old[2]];
+      if (!article) { dzNotFound('journal', old[2]); return; }
+      dzBody.innerHTML = '<article class="dp-article"><div class="dp-art" id="dzArt"></div><div class="dp-tag">' + article[0] + '</div><h1 class="dp-title">' + article[1] + '</h1><p>' + (ar ? article[3] : article[2]) + '</p></article>';
+      const svg = el && el.querySelector('svg'); if (svg) document.getElementById('dzArt').appendChild(svg.cloneNode(true));
+      openPage(); return;
     }
-    dzBody.appendChild(dzSuggest(m[1] === 'product' ? i : -1, m[1] === 'product' ? 'You may also like' : 'Shop our scents'));
+    if (path.length !== 2 || !['product', 'category', 'order', 'user'].includes(path[0])) { closePage(); return; }
+    const [, kind, id] = [null, path[0], path[1]];
+    if (!id) { dzNotFound(kind, ''); return; }
+    if (kind === 'product') {
+      const cards = [...document.querySelectorAll('.product-card')];
+      const index = cards.findIndex(c => String(c.dataset.id || '').toLowerCase() === id.toLowerCase());
+      if (index < 0) { if (!dzRemoteDataReady) dzLoading(); else dzNotFound(kind, id); return; }
+      dzRenderProduct(cards[index], index); return;
+    }
+    if (kind === 'category') {
+      const category = dzCategoryRows.find(c => String(c.slug).toLowerCase() === id.toLowerCase()) ||
+        [...document.querySelectorAll('.product-card')].some(c => c.dataset.cat === id) && { slug: id, name_en: id, name_ar: id };
+      if (!category) { if (!dzRemoteDataReady) dzLoading(); else dzNotFound(kind, id); return; }
+      const matches = [...document.querySelectorAll('.product-card')].filter(c => c.dataset.cat === category.slug);
+      dzBody.innerHTML = '<section class="dp-category"><div class="dp-tag">' + (ar ? 'التصنيف' : 'CATEGORY') + '</div><h1 class="dp-title">' + safe(ar ? (category.name_ar || category.name_en) : category.name_en) + '</h1>' +
+        (matches.length ? '<div class="dp-sug-grid">' + matches.map(c => '<a class="dp-sug" href="/product/' + encodeURIComponent(c.dataset.id) + '"><div class="dp-sug-art">' + (c.querySelector('svg, img') ? c.querySelector('svg, img').outerHTML : '') + '</div><div class="dp-sug-info"><div class="dp-sug-name">' + safe(c.querySelector('.product-name').textContent) + '</div><div class="dp-type">' + safe(c.querySelector('.product-type').textContent) + '</div><div class="dp-sug-price">' + safe(c.querySelector('.product-price').textContent) + '</div></div></a>').join('') + '</div>' : '<p class="dp-desc">' + (ar ? 'لا توجد منتجات منشورة في هذا التصنيف.' : 'No published products in this category.') + '</p>') + '</section>';
+      openPage(); return;
+    }
+    if (kind === 'order' || kind === 'user') {
+      dzBody.innerHTML = '<section class="dp-article"><div class="dp-tag">' + (ar ? 'بيانات خاصة' : 'PRIVATE INFORMATION') + '</div><h1 class="dp-title">' + (ar ? (kind === 'order' ? 'تفاصيل الطلب' : 'الملف الشخصي') : (kind === 'order' ? 'Order details' : 'User profile')) + '</h1><p class="dp-desc">' + (ar ? 'لا تُعرض بيانات الطلبات أو المستخدمين عبر روابط عامة. سجّل الدخول من القناة الآمنة المناسبة للوصول إليها.' : 'Order and user data are not exposed through public links. Use the appropriate secure sign-in flow to access them.') + '</p></section>';
+      openPage(); return;
+    }
+    closePage();
+  }
+  function dzLoading() {
+    dzBody.innerHTML = '<p class="dp-desc" role="status">' + (dzLang === 'ar' ? 'جارٍ تحميل البيانات…' : 'Loading…') + '</p>';
+    dzPage.classList.add('open'); document.body.style.overflow = 'hidden';
+  }
+  function dzNotFound(kind, id) {
+    const ar = dzLang === 'ar';
+    dzBody.innerHTML = '<section class="dp-article"><div class="dp-tag">404 · ' + safeRouteText(kind) + '</div><h1 class="dp-title">' + (ar ? 'العنصر غير موجود' : 'Not Found') + '</h1><p class="dp-desc">' + (ar ? 'لم نعثر على عنصر يطابق المعرّف ' : 'No item was found for ID ') + '<bdi>' + safeRouteText(id) + '</bdi></p></section>';
+    dzPage.classList.add('open'); dzPage.scrollTop = 0; document.body.style.overflow = 'hidden';
+  }
+  function safeRouteText(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function dzRenderProduct(card, i) {
+    const ar = dzLang === 'ar';
+    if (!card || !dzProducts[i]) { dzNotFound('product', location.pathname.split('/').pop()); return; }
+    const d = dzProducts[i], q = selector => card.querySelector(selector).textContent;
+    const notes = (d.labels || ['Top notes', 'Heart notes', 'Base notes']).map((label, k) => '<div class="dp-note"><b>' + label + '</b><span>' + ((ar ? d.na : d.n)[k] || []).join(' · ') + '</span></div>').join('');
+    dzBody.innerHTML = '<div class="dp-product"><div class="dp-bottle" id="dzArt"></div><div><h1 class="dp-name">' + safeRouteText(q('.product-name')) + '</h1><div class="dp-type">' + safeRouteText(q('.product-type')) + '</div><div class="dp-price">' + safeRouteText(q('.product-price')) + '</div><p class="dp-desc">' + safeRouteText(ar ? d.ar : d.en) + '</p><div class="dp-notes">' + notes + '</div><button class="add-btn" id="dzAdd">' + (ar ? 'أضف إلى الحقيبة' : 'Add to Bag') + '</button></div></div>';
+    const art = card.querySelector('svg, img'); if (art) document.getElementById('dzArt').appendChild(art.cloneNode(true));
+    const btn = document.getElementById('dzAdd');
+    if (card.querySelector('.add-btn').disabled) { btn.disabled = true; btn.textContent = ar ? 'نفد المخزون' : 'Sold Out'; }
+    btn.addEventListener('click', () => { card.querySelector('.add-btn').click(); btn.textContent = ar ? 'تمت الإضافة ✓' : 'Added ✓'; setTimeout(() => { btn.textContent = ar ? 'أضف إلى الحقيبة' : 'Add to Bag'; }, 1600); });
+    dzBody.appendChild(dzSuggest(i, ar ? 'قد يعجبك أيضًا' : 'You may also like'));
     dzPage.classList.add('open'); dzPage.scrollTop = 0; document.body.style.overflow = 'hidden';
   }
   function dzSetLang(l) {
@@ -2246,7 +2285,10 @@ Chat on WhatsApp|تواصل عبر واتساب`.split('\n').forEach(l => {
   }
   document.addEventListener('click', e => { if (e.target.closest('.lang-btn')) dzSwitch(dzLang === 'ar' ? 'en' : 'ar'); });
   window.addEventListener('load', () => { if (document.fonts) document.fonts.load('400 16px Cairo', 'عربي'); });
-  document.getElementById('dzBack').addEventListener('click', () => { location.hash = ''; });
+  document.getElementById('dzBack').addEventListener('click', () => {
+    if (location.pathname !== '/') { history.pushState({}, '', '/'); dzRoute(); }
+    else location.hash = '';
+  });
   // ===== More products: watches, phone cases, accessories =====
   Object.assign(dzAR, { 'All': 'الكل', 'Watches': 'ساعات', 'Phone Cases': 'جرابات الهاتف', 'Accessories': 'إكسسوارات', 'Material': 'الخامة', 'Size': 'المقاس', 'Warranty': 'الضمان', '✦ Added': '✦ تمت الإضافة' });
   const dzSv = '<svg class="product-img bottle-svg" viewBox="0 0 160 240" xmlns="http://www.w3.org/2000/svg">';
@@ -2310,9 +2352,18 @@ Chat on WhatsApp|تواصل عبر واتساب`.split('\n').forEach(l => {
     dzBar.appendChild(b);
   });
   dzGrid.insertAdjacentElement('beforebegin', dzBar);
-  document.querySelectorAll('.product-card').forEach((c, i) => c.addEventListener('click', e => { if (!e.target.closest('.add-btn')) location.hash = '#/product/' + i; }));
+  function dzProductPath(card) {
+    if (!card.dataset.id) card.dataset.id = card.querySelector('.product-name').textContent.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return '/product/' + encodeURIComponent(card.dataset.id);
+  }
+  function dzNavigate(path) { history.pushState({}, '', path); dzRoute(); }
+  document.querySelectorAll('.product-card').forEach(c => {
+    dzProductPath(c);
+    c.addEventListener('click', e => { if (!e.target.closest('.add-btn')) dzNavigate(dzProductPath(c)); });
+  });
   document.querySelectorAll('.blog-featured, .blog-item').forEach((c, i) => c.addEventListener('click', () => { location.hash = '#/journal/' + i; }));
   window.addEventListener('hashchange', dzRoute);
+  window.addEventListener('popstate', dzRoute);
   let dzSaved = null; try { dzSaved = localStorage.getItem('dezelLang'); } catch (e) {}
   const dzStart = dzSaved || ((navigator.language || '').startsWith('ar') ? 'ar' : 'en');
   if (dzStart === 'ar') dzSetLang('ar');
@@ -2400,9 +2451,10 @@ Chat on WhatsApp|تواصل عبر واتساب`.split('\n').forEach(l => {
   function dzLoad(cats, rows) {
     const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
     const by = {};
+    dzCategoryRows = Array.isArray(cats) ? cats : [];
     cats.forEach(c => { by[c.slug] = c; dzAR[c.name_en] = c.name_ar; });
     if (cats.length) rows = rows.filter(r => by[r.cat]);
-    if (!rows.length) return;
+    if (!rows.length) { dzRemoteDataReady = true; dzRoute(); return; }
     dzGrid.querySelectorAll('.product-card').forEach(c => c.remove());
     dzProducts.length = 0; productsDB.length = 0;
     rows.forEach((r, k) => {
@@ -2428,7 +2480,8 @@ Chat on WhatsApp|تواصل عبر واتساب`.split('\n').forEach(l => {
   if (window.DEZEL && DEZEL.url) {
     const api = path => fetch(DEZEL.url + '/rest/v1/' + path, { headers: { apikey: DEZEL.key, Authorization: 'Bearer ' + DEZEL.key } }).then(r => r.json());
     Promise.all([api('categories?published=eq.true&select=*&order=sort.asc'), api('products?published=eq.true&select=*&order=sort.asc,created_at.asc')])
-      .then(([cats, rows]) => { if (Array.isArray(rows)) dzLoad(Array.isArray(cats) ? cats : [], rows); }).catch(() => {});
+      .then(([cats, rows]) => { if (Array.isArray(rows)) dzLoad(Array.isArray(cats) ? cats : [], rows); else { dzRemoteDataReady = true; dzRoute(); } })
+      .catch(() => { dzRemoteDataReady = true; dzRoute(); });
   }
 
   // ===== Real cart + orders (prices are calculated by the server, never by the browser) =====
