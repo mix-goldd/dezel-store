@@ -1,0 +1,1 @@
+{"routes":[{"path":"/","title":"DÉZEL Store"},{"path":"/product/:id","title":"Product"},{"path":"/category/:id","title":"Category"},{"path":"/order/:id","title":"Order"},{"path":"/user/:id","title":"User"}]}

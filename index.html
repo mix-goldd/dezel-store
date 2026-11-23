@@ -1438,6 +1438,29 @@
     .search-close-icon { top: 20px; right: 20px; }
     .search-close-icon svg { width: 24px; height: 24px; }
   }
+  /* ========== HERO SHOWCASE (glass bottle on a podium, products rotate automatically) ========== */
+  .hero .hero-tagline-left h1, .hero .hero-tagline-right h1 { position: absolute !important; width: 1px; height: 1px; margin: 0 !important; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .hero-bottle { position: absolute !important; width: 0 !important; height: 0 !important; opacity: 0; pointer-events: none; animation: none !important; filter: none !important; }
+  .hero-pedestal { display: none !important; }
+  .arch-center .arch-inner { border: 2px solid rgba(232,140,80,.55); box-shadow: 0 0 40px rgba(232,140,80,.2), inset 0 0 50px rgba(232,140,80,.07); }
+  .arch-center .arch-inner::before, .arch-center .arch-inner::after { opacity: .85; background: linear-gradient(to bottom, transparent, #e8935a, transparent); }
+  .hx { position: relative; width: 300px; height: 410px; cursor: pointer; }
+  .hx::after { content: ''; position: absolute; left: 8%; right: 8%; bottom: -8px; height: 26px; background: radial-gradient(ellipse, rgba(232,140,80,.32), transparent 70%); pointer-events: none; }
+  .hx-slides { position: absolute; left: 0; right: 0; bottom: 78px; height: 300px; }
+  .hx-slide { position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; opacity: 0; transform: translateY(10px) scale(.97); transition: opacity .8s ease, transform .8s ease; pointer-events: none; }
+  .hx-slide.on { opacity: 1; transform: none; }
+  .hx-float { display: flex; align-items: flex-end; justify-content: center; height: 100%; }
+  .hx-slide.on .hx-float { animation: float 5s ease-in-out infinite; }
+  .hx-bottle { height: 100%; width: auto; filter: drop-shadow(0 18px 28px rgba(232,140,80,.18)); }
+  .hx-photo { height: 104%; margin-bottom: -26px; width: auto; max-width: 290px; object-fit: contain; -webkit-mask-image: radial-gradient(ellipse 60% 58% at 50% 50%, #000 62%, transparent 100%); mask-image: radial-gradient(ellipse 60% 58% at 50% 50%, #000 62%, transparent 100%); }
+  .hx-pod { position: absolute; left: 0; bottom: 0; width: 300px; height: 122px; filter: drop-shadow(0 0 12px rgba(232,140,80,.35)); }
+  .hx-name { margin-top: 20px; min-height: 28px; font-family: 'Cormorant Garamond', serif; font-size: 22px; letter-spacing: .06em; color: var(--gold-light); text-align: center; }
+  .hx-dots { display: flex; justify-content: center; gap: 4px; margin-top: 4px; min-height: 28px; }
+  .hx-dots button { width: 28px; height: 28px; background: none; border: none; cursor: pointer; position: relative; }
+  .hx-dots button::after { content: ''; position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: rgba(200,145,90,.35); transition: background .3s, transform .3s; }
+  .hx-dots button.on::after { background: #e8935a; transform: scale(1.5); }
+  @media (min-width: 993px) { .hx { transform: scale(1.15); transform-origin: 50% 100%; margin-bottom: 16px; } }
+  @media (prefers-reduced-motion: reduce) { .hx-slide.on .hx-float { animation: none; } }
 </style>
 </head>
 <body>
@@ -1675,6 +1698,16 @@
       <ellipse cx="100" cy="292" rx="65" ry="5" fill="rgba(200,145,90,0.12)"/>
     </svg>
     <div class="hero-pedestal"></div>
+    <div class="hx" id="hx" aria-label="Featured perfumes">
+      <div class="hx-slides" id="hxSlides"></div>
+      <svg class="hx-pod" viewBox="0 0 320 130" aria-hidden="true"><defs><linearGradient id="hxRim" x1="0" x2="1"><stop offset="0" stop-color="#8a4f2a"/><stop offset=".5" stop-color="#ffb27a"/><stop offset="1" stop-color="#8a4f2a"/></linearGradient><linearGradient id="hxBody" x1="0" x2="1"><stop offset="0" stop-color="#0b0b0b"/><stop offset=".5" stop-color="#1d1d1d"/><stop offset="1" stop-color="#0b0b0b"/></linearGradient></defs>
+        <path d="M8 96v16a152 15 0 0 0 304 0v-16z" fill="url(#hxBody)" stroke="url(#hxRim)" stroke-width="1.4"/><ellipse cx="160" cy="96" rx="152" ry="15" fill="#161616" stroke="url(#hxRim)" stroke-width="2"/>
+        <path d="M40 66v16a120 12 0 0 0 240 0v-16z" fill="url(#hxBody)" stroke="url(#hxRim)" stroke-width="1.2"/><ellipse cx="160" cy="66" rx="120" ry="12" fill="#181818" stroke="url(#hxRim)" stroke-width="2"/>
+        <path d="M72 38v16a88 10 0 0 0 176 0v-16z" fill="url(#hxBody)" stroke="url(#hxRim)" stroke-width="1.1"/><ellipse cx="160" cy="38" rx="88" ry="10" fill="#1c1c1c" stroke="url(#hxRim)" stroke-width="2.4"/>
+      </svg>
+    </div>
+    <div class="hx-name" id="hxName"></div>
+    <div class="hx-dots" id="hxDots"></div>
   </div>
   <div class="hero-tagline-right fade-in">
     <h1><span>EXCLUSIVE</span><span>SCENTS.</span></h1>
@@ -2455,6 +2488,7 @@ Chat on WhatsApp|تواصل عبر واتساب`.split('\n').forEach(l => {
     cats.forEach(c => { by[c.slug] = c; dzAR[c.name_en] = c.name_ar; });
     if (cats.length) rows = rows.filter(r => by[r.cat]);
     if (!rows.length) { dzRemoteDataReady = true; dzRoute(); return; }
+    hxFromRows(rows);
     dzGrid.querySelectorAll('.product-card').forEach(c => c.remove());
     dzProducts.length = 0; productsDB.length = 0;
     rows.forEach((r, k) => {
@@ -2573,6 +2607,46 @@ Chat on WhatsApp|تواصل عبر واتساب`.split('\n').forEach(l => {
   document.getElementById('custGovernorate').addEventListener('change', dzQuote);
   document.getElementById('goToCheckout').addEventListener('click', dzQuote);
   if (dzLang === 'ar') { dzTrTree(document.body); dzAttrs(true); } // translate the static text that the later blocks added to the dictionary
+
+  // ===== Hero showcase: shows the dashboard products one after another, automatically =====
+  const HX_BOTTLE = '<svg class="hx-bottle" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="hxCap" x1="0" x2="1"><stop offset="0" stop-color="#0a0a0a"/><stop offset=".25" stop-color="#2a2a2a"/><stop offset=".6" stop-color="#101010"/><stop offset="1" stop-color="#050505"/></linearGradient><linearGradient id="hxCu" x1="0" x2="1"><stop offset="0" stop-color="#7a4424"/><stop offset=".5" stop-color="#f0a366"/><stop offset="1" stop-color="#7a4424"/></linearGradient><linearGradient id="hxGl" x1="0" x2="1"><stop offset="0" stop-color="#fff" stop-opacity=".5"/><stop offset=".08" stop-color="#cfd6dc" stop-opacity=".22"/><stop offset=".5" stop-color="#fff" stop-opacity=".03"/><stop offset=".92" stop-color="#cfd6dc" stop-opacity=".22"/><stop offset="1" stop-color="#fff" stop-opacity=".45"/></linearGradient></defs><rect x="62" y="6" width="76" height="54" rx="4" fill="url(#hxCap)"/><rect x="66" y="60" width="68" height="8" fill="url(#hxCu)"/><rect x="74" y="68" width="52" height="13" fill="#0b0b0b" stroke="#8a8a8a" stroke-opacity=".35"/><rect x="24" y="80" width="152" height="208" rx="16" fill="#05050a"/><rect x="24" y="80" width="152" height="208" rx="16" fill="url(#hxGl)" stroke="#dfe6ea" stroke-opacity=".55" stroke-width="2"/><rect x="34" y="90" width="132" height="168" rx="9" fill="none" stroke="#fff" stroke-opacity=".12"/><rect x="34" y="262" width="132" height="20" rx="5" fill="#fff" fill-opacity=".07"/><rect x="56" y="128" width="88" height="98" fill="#090909" stroke="#c8915a" stroke-opacity=".7"/><path d="M100 140l5 7-5 7-5-7z" fill="none" stroke="#d9a56a" stroke-width="1"/><text x="100" y="186" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="20" fill="#e2b27a" letter-spacing="3">DÉZEL</text><text x="100" y="204" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="6.5" fill="#8a7a66" letter-spacing="3">PARFUM</text></svg>';
+  const hx = { i: 0, list: [], timer: null, seen: true, drag: 0 };
+  function hxShow(n) {
+    const slides = document.querySelectorAll('#hxSlides .hx-slide'), dots = document.querySelectorAll('#hxDots button');
+    if (!slides.length) return;
+    hx.i = (n + slides.length) % slides.length;
+    slides.forEach((s, k) => s.classList.toggle('on', k === hx.i));
+    dots.forEach((d, k) => { d.classList.toggle('on', k === hx.i); d.setAttribute('aria-current', k === hx.i); });
+    document.getElementById('hxName').textContent = (hx.list[hx.i] || {}).name || '';
+    document.getElementById('hx').style.cursor = (hx.list[hx.i] || {}).index >= 0 ? 'pointer' : 'default';
+  }
+  function hxStart() {
+    clearInterval(hx.timer);
+    if (hx.list.length < 2 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    hx.timer = setInterval(() => { if (!document.hidden && hx.seen) hxShow(hx.i + 1); }, 4500);
+  }
+  function hxBuild(items) {
+    hx.list = items;
+    document.getElementById('hxSlides').innerHTML = items.map(it => '<div class="hx-slide"><div class="hx-float">' + (it.img ? '<img class="hx-photo" src="' + dzEsc(it.img) + '" alt="' + dzEsc(it.name) + '">' : HX_BOTTLE) + '</div></div>').join('');
+    document.getElementById('hxDots').innerHTML = items.length > 1 ? items.map((it, k) => '<button type="button" data-k="' + k + '" aria-label="' + dzEsc(it.name) + '"></button>').join('') : '';
+    hxShow(0); hxStart();
+  }
+  function hxFromRows(rows) {
+    const items = [];
+    rows.forEach((r, k) => { if (r.image_url && r.stock > 0 && items.length < 8) items.push({ name: r.name, img: r.image_url, index: k }); });
+    if (items.length) hxBuild(items);
+  }
+  hxBuild([{ name: '', img: null, index: -1 }]);
+  document.getElementById('hxDots').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { hxShow(+b.dataset.k); hxStart(); } });
+  const hxEl = document.getElementById('hx');
+  let hxX = 0;
+  hxEl.addEventListener('touchstart', e => { hxX = e.touches[0].clientX; hx.drag = 0; }, { passive: true });
+  hxEl.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - hxX;
+    if (Math.abs(dx) > 40) { hx.drag = 1; hxShow(hx.i + (dx < 0 ? 1 : -1)); hxStart(); }
+  }, { passive: true });
+  hxEl.addEventListener('click', () => { const it = hx.list[hx.i]; if (!hx.drag && it && it.index >= 0) location.hash = '#/product/' + it.index; hx.drag = 0; });
+  if ('IntersectionObserver' in window) new IntersectionObserver(en => { hx.seen = en[0].isIntersecting; }).observe(hxEl);
 
   // ========== PRELOADER ==========
   const preloaderEl = document.getElementById('preloader');
